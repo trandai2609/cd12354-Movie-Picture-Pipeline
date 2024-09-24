@@ -86,8 +86,8 @@ jobs:
         IMAGE_TAG: latest
         REPO_NAME: backend
       run: |
-        docker build --build-arg=REACT_APP_MOVIE_API_URL=http://localhost:5000 --tag 627483498834.dkr.ecr.us-east-1.amazonaws.com/$REPO_NAME:$IMAGE_TAG .
-        docker push 627483498834.dkr.ecr.us-east-1.amazonaws.com/$REPO_NAME:$IMAGE_TAG
+        docker build --build-arg=REACT_APP_MOVIE_API_URL=http://localhost:5000 --tag 516286445600.dkr.ecr.us-east-1.amazonaws.com/project-4-be:001 .
+        docker push 516286445600.dkr.ecr.us-east-1.amazonaws.com/project-4-be:001
     - name: Update Kubeconfig
       run:
        aws eks update-kubeconfig --name cluster --region us-east-1
@@ -99,5 +99,5 @@ jobs:
         REPO_NAME: backend
       run: |
         aws eks update-kubeconfig --name cluster --region us-east-1
-        kustomize edit set image backend=627483498834.dkr.ecr.us-east-1.amazonaws.com/$REPO_NAME:$IMAGE_TAG
+        kustomize edit set image backend=516286445600.dkr.ecr.us-east-1.amazonaws.com/project-4-be:001
         kustomize build | kubectl apply -f -
