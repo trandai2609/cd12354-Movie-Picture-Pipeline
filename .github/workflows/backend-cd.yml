@@ -1,103 +1,108 @@
+# This is a basic workflow that is manually triggered
+
 name: Backend Continuous Deployment
 
+# Controls when the workflow will run
 on:
-  # push:
-  #   branches:
-  #     - main
-  #   paths:
-  #     - 'starter/frontend/**'
-  workflow_dispatch:  # Allow manual triggering
-  pull_request:
-    types: [closed]
-    branches:
-      - main
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    branches: [ "main" ]
 
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+  
+env:
+  PYTHON_VERSION: 3.12.1
+  IMAGE_REPO_NAME: backend
+  IMAGE_TAG: latest
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  Linting:
-    if: github.event.pull_request.merged == true
+  lint:
+    name: LINT JOB
     runs-on: ubuntu-latest
-    environment: Devlopment Environment
-
-    steps:
-    - name: Check the Repository
-      uses: actions/checkout@v3
-
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: " 3.12.1"
-
-    - name: Install Rependencies
-      working-directory: starter/backend 
-      run:  |
-        python -m pip install --upgrade pip
-        pip install pipenv
-        pip install flake8
-
-    - name: Checkout Run Lint
-      run: cd starter/backend && pipenv run lint
-
-  Test:
-    if: github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Check the Repository
-      uses: actions/checkout@v3
-
-    - name: Use Python 3
-      uses:  actions/setup-python@v4
-      with:
-        python-version: " 3.12.1"
-
-    - name: Install Dependencies
-      working-directory: starter/backend 
-      run:  |
-        python -m pip install --upgrade pip
-        pip install pipenv
-        pip install flake8
-
-    - name: Test
-      run: cd starter/backend && pipenv install pytest && pipenv run test
-
-      
-  Build:
-    needs: [Linting, Test]
-    runs-on: ubuntu-latest
-    environment: Devlopment Environment
-    steps:
-    - name: Check the Repository
-      uses: actions/checkout@v3
-
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v3
-      with:
-        aws-access-key-id: ${{ secrets.ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
-        aws-region: us-east-1
-        
-    - name: Login to Amazon
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v2
-
-    - name: Build and Push Docker Image
-      working-directory: starter/backend
-      env:
-        IMAGE_TAG: latest
-        REPO_NAME: backend
-      run: |
-        docker build --build-arg=REACT_APP_MOVIE_API_URL=http://localhost:5000 --tag 516286445600.dkr.ecr.us-east-1.amazonaws.com/project-4-be:001 .
-        docker push 516286445600.dkr.ecr.us-east-1.amazonaws.com/project-4-be:001
-    - name: Update Kubeconfig
+    defaults:
       run:
-       aws eks update-kubeconfig --name cluster --region us-east-1
+        working-directory: ./starter/backend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Python Environment
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{env.PYTHON_VERSION}}
+      
+      - name: Install Linting Tools and Pipenv
+        run: |
+          python -m pip install --upgrade pip
+          pip install pipenv flake8
+  
+      - name: Install dependencies
+        run: |
+          pipenv install
+  test: 
+    name: TEST JOB
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./starter/backend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Python Environment
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{env.PYTHON_VERSION}}
+      
+      - name: Install Testing Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pipenv pytest
+  
+      - name: Install dependencies
+        run: |
+          pipenv install
+  
+      - name: Run Backend Tests
+        run: | 
+          pipenv run test
+  build:
+    name: BUILD JOB
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./starter/backend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+  
+      - name: Configure AWS Credentials for Deployment
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
-    - name: Deploy Docker Image to Amazon EKS
-      working-directory: starter/backend/k8s
-      env:
-        IMAGE_TAG: latest
-        REPO_NAME: backend
-      run: |
-        aws eks update-kubeconfig --name cluster --region us-east-1
-        kustomize edit set image backend=516286445600.dkr.ecr.us-east-1.amazonaws.com/project-4-be:001
-        kustomize build | kubectl apply -f -
+      - name: Login AWS
+        uses: aws-actions/amazon-ecr-login@v2
+        with: 
+          aws-access-key-id: ${{ secrets.ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+          
+      - name: Build and Push Docker Image
+        run: |
+          aws eks update-kubeconfig --name cluster --region us-east-1
+          kubectl get svc
+          docker build -t project-4-be:001 .
+          docker tag project-4-be:001 516286445600.dkr.ecr.us-east-1.amazonaws.com/project-4-be:001
+          docker push 516286445600.dkr.ecr.us-east-1.amazonaws.com/project-4-be:001
+  
+      - name: Deploy to AWS EKS
+        run: |
+          aws eks update-kubeconfig --name cluster --region us-east-1
+          cd k8s
+          kustomize edit set image backend=516286445600.dkr.ecr.us-east-1.amazonaws.com/project-4-be:001
+          kustomize build | kubectl apply -f -
