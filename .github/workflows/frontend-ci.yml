@@ -17,7 +17,7 @@ env:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   lint:
-    name: LINT JOB
+    name: LINT
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -48,7 +48,7 @@ jobs:
           npm run lint
           
   test:
-    name: TEST JOB
+    name: TEST
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -78,7 +78,7 @@ jobs:
         run: npm run test
 
   build:
-    name: BUILD JOB
+    name: BUILD SOURCE
     needs: [lint, test]
     runs-on: ubuntu-latest
     defaults:

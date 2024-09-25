@@ -41,7 +41,7 @@ jobs:
         run: |
           pipenv install
   test: 
-    name: TEST JOB
+    name: TEST
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -68,7 +68,7 @@ jobs:
         run: | 
           pipenv run test
   build:
-    name: BUILD JOB
+    name: BUILD
     needs: [lint, test]
     runs-on: ubuntu-latest
     defaults:
@@ -92,7 +92,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
           aws-region: us-east-1
           
-      - name: Build and Push Docker Image
+      - name: Build Docker Image
         run: |
           aws eks update-kubeconfig --name cluster --region us-east-1
           kubectl get svc
@@ -100,7 +100,7 @@ jobs:
           docker tag project-4-be:001 516286445600.dkr.ecr.us-east-1.amazonaws.com/project-4-be:001
           docker push 516286445600.dkr.ecr.us-east-1.amazonaws.com/project-4-be:001
   
-      - name: Deploy to AWS EKS
+      - name: Deploy EKS
         run: |
           aws eks update-kubeconfig --name cluster --region us-east-1
           cd k8s
