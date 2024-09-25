@@ -4,7 +4,9 @@ import axios from 'axios';
 function MovieDetail({ movie }) {
   const [details, setDetails] = useState(null);
   useEffect(() => {
-    axios.get(`${process.env.REACT_APP_MOVIE_API_URL}/movies/${movie.id}`).then((response) => {
+    const apiUrl = process.env.REACT_APP_MOVIE_API_URL;
+    console.log('apiUrl111   :', apiUrl);
+    axios.get(`${apiUrl}/movies/${movie.id}`).then((response) => {
       setDetails(response.data);
     });
   }, [movie]);
