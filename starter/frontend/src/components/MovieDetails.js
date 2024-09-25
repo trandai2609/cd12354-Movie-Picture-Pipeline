@@ -6,6 +6,7 @@ function MovieDetail({ movie }) {
   useEffect(() => {
     const apiUrl = process.env.REACT_APP_MOVIE_API_URL;
     console.log('apiUrl111   :', apiUrl);
+    
     axios.get(`${apiUrl}/movies/${movie.id}`).then((response) => {
       setDetails(response.data);
     });
